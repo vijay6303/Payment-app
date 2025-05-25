@@ -24,59 +24,52 @@ exports.getBalance = async (req, res) => {
 
 exports.transferBalance = async (req, res) => {
   try {
-    // Create a session and start a transaction
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    // Get the userId of the account you wish to transfer the amount and the amount
     const { amount, to } = req.body;
 
-    // Check if amount is negative
-    if (amount <= 0) {
-      await session.abortTransaction();
-      return res
-        .status(400)
-        .json({ message: "Amount cannot be negative/Zero" });
+    // Validate amount
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid amount",
+      });
     }
 
-    // Check if the user sending has sufficient balance
-    const account = await Account.findOne({ userId: req.userId }).session(
-      session
-    );
-    if (!account || account.balance < amount) {
-      await session.abortTransaction();
-      return res.status(400).json({ message: "Insufficient balance" });
+    // Get sender's account
+    const senderAccount = await Account.findOne({ userId: req.userId });
+    if (!senderAccount || senderAccount.balance < amount) {
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient balance",
+      });
     }
 
-    // Check if user to which youre sending is valid or not
-    const toAccount = await Account.findOne({ userId: to }).session(session);
-    if (!toAccount) {
-      await session.abortTransaction();
-      return res.status(400).json({ message: "Invalid account" });
+    // Get receiver's account
+    const receiverAccount = await Account.findOne({ userId: to });
+    if (!receiverAccount) {
+      return res.status(400).json({
+        success: false,
+        message: "Receiver account not found",
+      });
     }
 
-    // Perform the transfer if everyhing is okay
-    await Account.updateOne(
-      { userId: req.userId },
-      { $inc: { balance: -amount } }
-    ).session(session);
-    await Account.updateOne(
-      { userId: to },
-      { $inc: { balance: amount } }
-    ).session(session);
+    // Update sender's balance
+    senderAccount.balance -= amount;
+    await senderAccount.save();
 
-    // Commit the transaction
-    session.commitTransaction();
+    // Update receiver's balance
+    receiverAccount.balance += amount;
+    await receiverAccount.save();
 
-    // return res
     res.status(200).json({
+      success: true,
       message: "Transfer successful",
+      balance: senderAccount.balance,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Transfer error:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Transfer failed",
     });
   }
 };

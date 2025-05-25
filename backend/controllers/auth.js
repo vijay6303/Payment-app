@@ -46,15 +46,24 @@ exports.signup = async (req, res) => {
       password: hashedPassword,
     });
 
-    // Give the user some balance beforehand to play with
-    const userId = user._id;
-    await Account.create({
-      userId: userId,
-      balance: 1 + Math.random() * 10000,
+    // Create an account with fixed balance
+    const account = await Account.create({
+      userId: user._id,
+      balance: 10000  // Fixed virtual balance for new users
     });
 
-    // send res
-    res.status(200).json({ message: "User created successfully" });
+    // Generate token for the new user
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+
+    res.status(200).json({ 
+      message: "User created successfully",
+      token: token,
+      user: {
+        firstname: user.firstname,
+        lastname: user.lastname,
+      },
+      balance: account.balance
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -72,26 +81,56 @@ const signinData = Zod.object({
 
 exports.signin = async (req, res) => {
   try {
-    // Get the data from req body
     const { username, password } = req.body;
 
-    // validate using ZOd
+    // Validate inputs using Zod
     const validatedInputs = signinData.safeParse({ username, password });
-
     if (!validatedInputs.success) {
-      return res.status(411).json({ message: "Error while logging in" });
+      return res.status(411).json({
+        success: false,
+        message: "Error while logging in"
+      });
     }
 
-    // Check if user exists
-    const user = await User.findOne({ username: username });
+    // Find user by username
+    const user = await User.findOne({ username });
     if (!user) {
-      return res.status(404).json({ message: "User not registered" });
+      return res.status(404).json({
+        success: false,
+        message: "User not registered"
+      });
     }
 
-    const token = await jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
 
-    // Send res
-    res.status(200).json({ token: token });
+    // Find user's account or create new one with fixed balance
+    let account = await Account.findOne({ userId: user._id });
+    if (!account) {
+      account = await Account.create({
+        userId: user._id,
+        balance: 10000  // Fixed virtual balance for users without an account
+      });
+    }
+
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+
+    res.status(200).json({
+      success: true,
+      token: token,
+      user: {
+        _id: user._id,
+        firstname: user.firstname,
+        lastname: user.lastname
+      },
+      balance: account.balance
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({

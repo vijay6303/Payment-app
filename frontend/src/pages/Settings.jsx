@@ -1,88 +1,96 @@
 import React, { useState } from "react";
-import Heading from "../components/Heading";
-import SubHeading from "../components/SubHeading";
-import InputBox from "../components/InputBox";
-import { useRecoilValue } from "recoil";
+import { useRecoilState, useRecoilValue } from "recoil";
 import { tokenAtom, userAtom } from "../store/atoms";
-import Button from "../components/Button";
 import { updateCredentials } from "../services/operations/userApi";
+import { useNavigate } from "react-router-dom";
 import Appbar from "../components/Appbar";
 
 const Settings = () => {
-  const user = useRecoilValue(userAtom);
+  const [user, setUser] = useRecoilState(userAtom);
   const token = useRecoilValue(tokenAtom);
   const [success, setSuccess] = useState(false);
-
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    firstname: "",
-    lastname: "",
-    password: "",
+    firstname: user.firstname || "",
+    lastname: user.lastname || "",
+    password: ""
   });
 
-  function handleChange(event) {
-    setFormData((prev) => ({
-      ...prev,
-      [event.target.name]: event.target.value,
-    }));
-  }
-
-  async function handleClick() {
-    const updatedData = {};
-    if (formData.firstname) updatedData.firstname = formData.firstname;
-    if (formData.lastname) updatedData.lastname = formData.lastname;
-    if (formData.password) updatedData.password = formData.password;
-
-    const response = await updateCredentials(token, updatedData);
-    if (response === "user updated successfully") {
-      setFormData({
-        firstname: "",
-        lastname: "",
-        password: "",
-      });
-      setSuccess(true);
-    } else {
-      setSuccess(false);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await updateCredentials(token, formData);
+      if (response.success) {
+        setUser({
+          ...user,
+          firstname: formData.firstname,
+          lastname: formData.lastname
+        });
+        setSuccess(true);
+      }
+    } catch (error) {
+      console.error("Update failed:", error);
     }
-  }
+  };
 
   return (
-    <div>
-      <Appbar user={user.firstname} />
-      <div className="bg-slate-300 h-screen flex justify-center items-center">
-        <div className="bg-white rounded-lg w-[80%] sm:w-[50%] lg:w-[23%] text-center p-3">
-          <div className="flex flex-col">
-            <Heading label={"Update credentials"} />
-            <SubHeading
-              label={"Enter the information that you want to update"}
-            />
-            <InputBox
-              label={"First Name"}
-              placeholder={user.firstname}
-              name={"firstname"}
-              value={formData.firstname}
-              onChange={handleChange}
-            />
-            <InputBox
-              label={"Last Name"}
-              placeholder={user.lastname}
-              name={"lastname"}
-              value={formData.lastname}
-              onChange={handleChange}
-            />
-            <InputBox
-              label={"Password"}
-              placeholder={"*******"}
-              name={"password"}
-              value={formData.password}
-              onChange={handleChange}
-            />
-            <Button label={"Update"} onClick={handleClick} />
-            {success && (
-              <div className="font-light text-green-400 text-xs mt-2">
-                Data updated!
-              </div>
-            )}
-          </div>
+    <div className="min-h-screen bg-slate-100">
+      <div className="p-4">
+        <Appbar user={user.firstname} />
+      </div>
+      
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-100px)]">
+        <div className="bg-white p-8 rounded-lg w-96 shadow-md">
+          <h1 className="text-3xl font-bold mb-2">Update credentials</h1>
+          <p className="text-gray-500 mb-6">Enter the information that you want to update</p>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">First Name</label>
+              <input
+                type="text"
+                value={formData.firstname}
+                onChange={(e) => setFormData({...formData, firstname: e.target.value})}
+                placeholder="Enter first name"
+                className="w-full p-2 border rounded-md focus:outline-none focus:border-gray-500"
+              />
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">Last Name</label>
+              <input
+                type="text"
+                value={formData.lastname}
+                onChange={(e) => setFormData({...formData, lastname: e.target.value})}
+                placeholder="Enter last name"
+                className="w-full p-2 border rounded-md focus:outline-none focus:border-gray-500"
+              />
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-semibold mb-2">Password</label>
+              <input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                placeholder="Enter password"
+                className="w-full p-2 border rounded-md focus:outline-none focus:border-gray-500"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Update
+            </button>
+          </form>
+
+          {success && (
+            <div className="mt-4 text-green-500 text-center">
+              Data updated!
+            </div>
+          )}
         </div>
       </div>
     </div>

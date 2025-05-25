@@ -26,27 +26,29 @@ const Signup = () => {
     }));
   }
 
-  async function hanldeClick(event) {
-    event.preventDefault();
-    const response = await signup(
-      formData.firstname,
-      formData.lastname,
-      formData.email,
-      formData.password
-    );
-    if (response === "User created successfully") {
-      setFormData({
-        firstname: "",
-        lastname: "",
-        email: "",
-        password: "",
-      });
-      setShowError(false);
-      navigate("/signin");
-    } else {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await signup(
+        formData.firstname,
+        formData.lastname,
+        formData.email,
+        formData.password
+      );
+      if (response.success) {
+        console.log("Signup successful:", response.message);
+        // Redirect to signin page after successful signup
+        navigate("/signin");
+      } else {
+        setShowError(true);
+        console.log("Signup failed:", response.message);
+      }
+    } catch (error) {
       setShowError(true);
+      console.error("Signup error:", error);
     }
-  }
+  };
+
   return (
     <div className="bg-slate-300 h-screen flex justify-center items-center">
       <div className="bg-white rounded-lg w-[80%] sm:w-[50%] lg:w-[23%] text-center p-3">
@@ -81,7 +83,7 @@ const Signup = () => {
             value={formData.password}
             onChange={changeHandler}
           />
-          <Button label={"Sign up"} onClick={hanldeClick} />
+          <Button label={"Sign up"} onClick={handleSubmit} />
           <BottomWarning
             label={"Already have an account? "}
             to={"/signin"}

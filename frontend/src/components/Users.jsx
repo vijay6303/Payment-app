@@ -1,84 +1,119 @@
-import React, { useEffect, useState } from "react";
-import Button from "./Button";
-import { getCurrentUser, getUsers } from "../services/operations/userApi";
-import { useRecoilValue, useSetRecoilState } from "recoil";
-import { tokenAtom, userAtom } from "../store/atoms";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { generateMockUsers } from '../utils/mockData';
+import Modal from './Modal';
 
-export const Users = () => {
-  const [filter, setFilter] = useState("");
+const Users = ({ balance, updateBalance }) => {
   const [users, setUsers] = useState([]);
-  const setCurrentUser = useSetRecoilState(userAtom);
-  const token = useRecoilValue(tokenAtom);
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [amount, setAmount] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const userList = await getUsers(token, filter);
-      setUsers(userList);
-    };
-    fetchUsers();
+    const mockUsers = generateMockUsers(20);
+    setUsers(mockUsers);
+    setLoading(false);
+  }, []);
 
-    const fetchCurrentUser = async () => {
-      const userDetails = await getCurrentUser(token);
-      setCurrentUser({
-        firstname: userDetails.firstname,
-        lastname: userDetails.lastname,
-      });
-    };
-    fetchCurrentUser();
-  }, [filter, token]);
+  const handleTransfer = async () => {
+    const transferAmount = parseInt(amount);
+    if (!transferAmount || transferAmount <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+    if (transferAmount > balance) {
+      setError('Insufficient balance');
+      return;
+    }
+
+    try {
+      // Calculate new balance
+      const newBalance = balance - transferAmount;
+      
+      // Update state and localStorage atomically
+      updateBalance(newBalance);
+      
+      // Update localStorage with new balance
+      const userData = JSON.parse(localStorage.getItem('user'));
+      localStorage.setItem('user', JSON.stringify({
+        ...userData,
+        balance: newBalance
+      }));
+
+      // Update UI for success
+      setSuccess('Payment Success!');
+      setTimeout(() => {
+        setShowModal(false);
+        setSelectedUser(null);
+        setAmount('');
+        setError('');
+        setSuccess('');
+      }, 2000);
+    } catch (error) {
+      setError('Transfer failed. Please try again.');
+    }
+  };
+
+  if (loading) return <div>Loading users...</div>;
 
   return (
-    <div className="px-4 sm:px-14">
-      <div className="font-bold text-lg ">Users</div>
-      <div className="my-2">
-        <input
-          onChange={(e) => setFilter(e.target.value)}
-          type="text"
-          placeholder="Search users..."
-          className="border rounded border-slate-200 px-2 py-1 w-full"
-        />
-      </div>
-      <div>
+    <div className="mt-6">
+      <h2 className="text-xl font-bold mb-4">Users</h2>
+      <div className="space-y-2">
         {users.map((user) => (
-          <User key={user._id} user={user} />
+          <div key={user._id} className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                {user.firstname[0]}{user.lastname[0]}
+              </div>
+              <span className="ml-3 font-medium">{user.firstname} {user.lastname}</span>
+            </div>
+            <button
+              onClick={() => {
+                setSelectedUser(user);
+                setShowModal(true);
+              }}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Send Money
+            </button>
+          </div>
         ))}
       </div>
+
+      <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
+        <h2 className="text-2xl font-bold mb-4">Send Money</h2>
+        {selectedUser && (
+          <div className="flex items-center mb-4">
+            <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xl">
+              {selectedUser.firstname[0]}{selectedUser.lastname[0]}
+            </div>
+            <span className="ml-3 text-xl">{selectedUser.firstname} {selectedUser.lastname}</span>
+          </div>
+        )}
+        <div className="w-full mb-4">
+          <label className="block text-sm mb-1">Amount (in RS)</label>
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="Enter amount"
+            className="w-full p-2 border rounded focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+        {success && <div className="text-green-500 mb-4">{success}</div>}
+        <button
+          onClick={handleTransfer}
+          className="w-full py-3 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          Initiate Transfer
+        </button>
+      </Modal>
     </div>
   );
 };
 
-function User({ user }) {
-  const navigate = useNavigate();
-  return (
-    <div className="w-full flex justify-between">
-      <div className="flex justify-center items-center">
-        <div className="rounded-full h-10 w-10 flex justify-center items-center bg-slate-300">
-          <img
-            src={`https://api.dicebear.com/9.x/initials/svg?seed=${user.firstname}`}
-            className="h-[90%] w-[90%] rounded-full"
-          />
-        </div>
-        <div className="font-medium text-sm ml-2">
-          {user.firstname} {user.lastname}
-        </div>
-      </div>
-
-      <div>
-        <Button
-          label={"Send Money"}
-          onClick={(e) =>
-            navigate(
-              "/send?id=" +
-                user._id +
-                "&name=" +
-                user.firstname +
-                "_" +
-                user.lastname
-            )
-          }
-        />
-      </div>
-    </div>
-  );
-}
+export default Users;

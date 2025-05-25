@@ -17,6 +17,7 @@ const Dropdown = () => {
     setToken(null);
     setUser({ firstname: "", lastname: "" });
     localStorage.removeItem("token");
+    localStorage.removeItem("user"); // Also remove user data
     navigate("/");
   }
 

@@ -1,40 +1,88 @@
-import { apiConnector } from "../apiConnector";
+import axios from 'axios';
+
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 export const signup = async (firstname, lastname, email, password) => {
   try {
-    const response = await apiConnector("POST", `${BASE_URL}/user/signup`, {
-      firstname: firstname,
-      lastname: lastname,
+    const response = await axios.post(`${BASE_URL}/user/signup`, {
+      firstname,
+      lastname,
       username: email,
-      password: password,
+      password,
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
 
-    if (!response.status) {
-      throw new Error(response.data.message);
-    } else {
-      return response.data.message;
+    console.log("SIGNUP RESPONSE:", response);
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        message: "User created successfully",
+        data: response.data
+      };
     }
+    
+    return {
+      success: false,
+      message: response?.data?.message || "Something went wrong"
+    };
+
   } catch (error) {
-    console.log("Signup error...", error.message);
+    console.log("SIGNUP API ERROR:", error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || "Something went wrong"
+    };
   }
 };
 
 export const signin = async (email, password) => {
   try {
-    const response = await apiConnector("POST", `${BASE_URL}/user/signin`, {
+    const response = await axios.post(`${BASE_URL}/user/signin`, {
       username: email,
-      password,
+      password
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
 
+    console.log("LOGIN RESPONSE:", response);
+
     if (response.status === 200) {
-      localStorage.setItem("token", JSON.stringify(response.data.token));
-      return response.data.token;
-    } else {
-      throw new Error(response.data.message);
+      const { token, user, balance } = response.data;
+      // Store both token and user data in localStorage
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify({
+        _id: user._id,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        balance: balance
+      }));
+      
+      return {
+        success: true,
+        data: {
+          user,
+          balance,
+          token
+        }
+      };
     }
+
+    return {
+      success: false,
+      message: "Login failed"
+    };
+
   } catch (error) {
-    console.log("Login error...", error.message);
-    console.log("Error in login");
+    console.log("LOGIN API ERROR:", error.message);
+    return {
+      success: false,
+      message: error.response?.data?.message || "Login failed"
+    };
   }
 };

@@ -1,60 +1,38 @@
-import { apiConnector } from "../apiConnector";
+import { apiConnector } from '../apiConnector';
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
-export const getUsers = async (token, filter) => {
+export const getUsers = async () => {
   try {
-    const response = await apiConnector(
-      "GET",
-      `${BASE_URL}/user/bulk`,
-      null,
-      { Authorization: `Bearer ${token}` },
-      { filter: filter }
-    );
-
-    if (response.status === 200) {
-      return response.data.user;
-    } else {
-      throw new Error(response.data.message);
-    }
+    const response = await apiConnector('GET', '/user/bulk');
+    return response;
   } catch (error) {
     console.log("Getusers error...", error.message);
+    return { success: false, message: error.message };
   }
 };
 
-export const getCurrentUser = async (token) => {
+export const getCurrentUser = async () => {
   try {
-    const response = await apiConnector(
-      "GET",
-      `${BASE_URL}/user/getCurrentUser`,
-      null,
-      { Authorization: `Bearer ${token}` }
-    );
-
-    if (response.status !== 200) {
-      throw new Error(response.data.message);
-    } else {
-      return response.data.currentUser;
-    }
+    const response = await apiConnector('GET', '/user/getCurrentUser');
+    return response;
   } catch (error) {
     console.log("get user error...", error.message);
+    return { success: false, message: error.message };
   }
 };
 
-export const updateCredentials = async (token, updatedData) => {
+export const updateCredentials = async (token, data) => {
   try {
-    const response = await apiConnector(
-      "PUT",
-      `${BASE_URL}/user/`,
-      updatedData,
-      { Authorization: `Bearer ${token}` }
-    );
-
-    if (response.status !== 200) {
-      throw new Error(response.data.message);
-    } else {
-      return response.data.message;
-    }
+    const response = await apiConnector('PUT', '/user', data, token);
+    return {
+      success: true,
+      data: response.data
+    };
   } catch (error) {
-    console.log("Update credentials error...", error.message);
+    console.log("Update credentials error...", error?.message);
+    return {
+      success: false,
+      message: error?.response?.data?.message || "Update failed"
+    };
   }
 };

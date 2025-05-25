@@ -1,13 +1,27 @@
-import axios from "axios";
+import axios from 'axios';
 
-export const axiosInstance = axios.create({});
+export const apiConnector = async (method, endpoint, data = null, token = null) => {
+  try {
+    const config = {
+      method,
+      url: `${import.meta.env.VITE_BASE_URL}${endpoint}`,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` })
+      },
+      ...(data && { data })
+    };
 
-export const apiConnector = (method, url, bodyData, headers, params) => {
-  return axiosInstance({
-    method: `${method}`,
-    url: `${url}`,
-    data: bodyData,
-    headers: headers ? headers : null,
-    params: params ? params : null,
-  });
+    console.log("API Request Config:", {
+      method: config.method,
+      url: config.url,
+      headers: config.headers
+    });
+
+    const response = await axios(config);
+    return response.data;
+  } catch (error) {
+    console.error("API Error:", error?.response?.data || error.message);
+    throw error;
+  }
 };

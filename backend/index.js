@@ -1,15 +1,17 @@
-const express = require("express");
+const express = require('express');
+const cors = require('cors');
 const app = express();
-const cors = require("cors");
+
+// CORS configuration
+app.use(cors({
+    origin: ['http://localhost:5173', 'https://payments-app-dusky.vercel.app'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 const userRoutes = require("./routes/userRoutes");
 const accountRoutes = require("./routes/accountRoutes");
-
-app.use(
-  cors({
-    origin: "https://payments-app-dusky.vercel.app",
-    credentials: true,
-  })
-);
 
 app.use(express.json());
 require("dotenv").config();
