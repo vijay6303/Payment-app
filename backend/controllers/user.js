@@ -1,5 +1,6 @@
 const Zod = require("zod");
 const User = require("../models/user");
+const cors = require('cors');
 
 const updateData = Zod.object({
   firstname: Zod.string().optional(),
@@ -104,3 +105,4 @@ exports.getCurrentUser = async (req, res) => {
     });
   }
 };
+
